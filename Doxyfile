@@ -1,0 +1,15 @@
+# Минимальная конфигурация Doxygen. Запуск из корня проекта: doxygen
+PROJECT_NAME           = "ConsoleCalculatorQt"
+PROJECT_BRIEF          = "Асинхронный консольный калькулятор на Qt (QtConcurrent, QFuture)"
+OUTPUT_LANGUAGE        = Russian
+OUTPUT_DIRECTORY       = docs
+INPUT                  = . tests
+FILE_PATTERNS          = *.h *.cpp
+EXCLUDE_PATTERNS       = */build/* moc_*
+RECURSIVE              = NO
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+INPUT_ENCODING         = UTF-8
+USE_MDFILE_AS_MAINPAGE = README.md
