@@ -5,10 +5,8 @@
 #include <QString>
 #include <functional>
 
-/**
- * @brief Асинхронный калькулятор: операции выполняются через QtConcurrent::run(),
- * результат приходит сигналом resultReady().
- */
+// Асинхронный калькулятор: операции выполняются через QtConcurrent::run(),
+// результат приходит сигналом resultReady()
 class Calculator : public QObject
 {
     Q_OBJECT
@@ -22,10 +20,10 @@ public:
     bool hasError() const { return m_hasError; }
     QString errorMessage() const { return m_errorMessage; }
 
-    /// Количество операций, выполняющихся в фоне.
+    // Количество операций, выполняющихся в фоне.
     int pendingCount() const { return m_pendingCount; }
 
-    /// Искусственная задержка операций, мс.
+    // Искусственная задержка операций, мс.
     int delayMs() const { return m_delayMs; }
 
 public slots:
@@ -39,15 +37,15 @@ public slots:
     void setDelayMs(int ms);
 
 signals:
-    /// Операция запущена в фоне.
+    // Операция запущена в фоне.
     void operationStarted(const QString& expression);
 
-    /// Результат готов (излучается в главном потоке).
+    // Результат готов (излучается в главном потоке).
     void resultReady(const QString& expression, double result);
 
     void errorOccurred(const QString &message);
 
-    /// Завершилась последняя фоновая операция.
+    // Завершилась последняя фоновая операция.
     void allFinished();
 
 private:
@@ -57,7 +55,7 @@ private:
     int m_pendingCount;
     int m_delayMs;
 
-    /// Запускает compute в фоновом потоке и следит за результатом через QFutureWatcher.
+    // Запускает compute в фоновом потоке и следит за результатом через QFutureWatcher.
     void startOperation(const QString& expression, std::function<double()> compute);
 
     void setResult(const QString& expression, double value);

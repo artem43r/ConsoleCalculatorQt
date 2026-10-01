@@ -4,9 +4,7 @@
 #include <QThread>
 #include "calculator.h"
 
-/**
- * @brief Юнит-тесты асинхронного калькулятора (QTest + QSignalSpy).
- */
+// Юнит-тесты асинхронного калькулятора (QTest + QSignalSpy)
 class TestCalculator : public QObject
 {
     Q_OBJECT

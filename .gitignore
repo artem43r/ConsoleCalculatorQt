@@ -24,6 +24,3 @@ history.txt
 
 # Настройки VS Code
 .vscode/
-
-# Сгенерированная документация Doxygen
-docs/

@@ -4,21 +4,19 @@
 #include <QThread>
 #include <QStringList>
 
-/**
- * @brief Читает строки из консоли в отдельном потоке и передаёт их сигналом lineRead().
- */
+// Читает строки из консоли в отдельном потоке и передаёт их сигналом lineRead()
 class ConsoleReader : public QThread
 {
     Q_OBJECT
 
 public:
-    /// @param stopCommands команды, после которых чтение прекращается
+    // stopCommands - команды, после которых чтение прекращается
     explicit ConsoleReader(const QStringList& stopCommands, QObject* parent = nullptr);
 
 signals:
     void lineRead(const QString& line);
 
-    /// Ввод закончился (Ctrl+Z).
+    // Ввод закончился (Ctrl+Z).
     void inputClosed();
 
 protected:
