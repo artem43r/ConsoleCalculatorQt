@@ -8,10 +8,8 @@
 #include <windows.h>
 #endif
 
-// Команды, по которым программа завершается
 static const QStringList kQuitCommands = {"quit", "exit"};
 
-// Выводит список доступных команд
 void printHelp(QTextStream& out)
 {
     out << "Доступные команды:\n";
@@ -25,7 +23,7 @@ void printHelp(QTextStream& out)
     out << " quit - выход\n";
 }
 
-// Разбирает одну введённую строку и вызывает нужный слот калькулятора.
+// Разбирает введённую строку и вызывает нужный слот.
 // Возвращает false, если пользователь попросил выйти.
 bool processLine(const QString& rawLine, Calculator& calc, QTextStream& out)
 {
@@ -37,23 +35,19 @@ bool processLine(const QString& rawLine, Calculator& calc, QTextStream& out)
     const QStringList parts = line.split(' ', Qt::SkipEmptyParts);
     const QString command = parts.value(0).toLower();
 
-    // Выход
     if (kQuitCommands.contains(command))
         return false;
 
-    // Справка
     if (command == "help") {
         printHelp(out);
         return true;
     }
 
-    // Сброс
     if (command == "reset") {
         calc.reset();
         return true;
     }
 
-    // Задержка вычислений
     if (command == "delay") {
         bool ok;
         const int ms = parts.value(1).toInt(&ok);
@@ -69,8 +63,6 @@ bool processLine(const QString& rawLine, Calculator& calc, QTextStream& out)
         return true;
     }
 
-    // Для арифметики должно быть:
-    // команда + два числа
     if (parts.size() != 3) {
         calc.reportError("Неверный формат. Используйте: <команда> <a> <b>");
         return true;
@@ -82,13 +74,11 @@ bool processLine(const QString& rawLine, Calculator& calc, QTextStream& out)
     const double a = parts[1].toDouble(&ok1);
     const double b = parts[2].toDouble(&ok2);
 
-    // Если хотя бы одно значение не число
     if (!ok1 || !ok2) {
         calc.reportError("Не удалось преобразовать операнды в числа");
         return true;
     }
 
-    // Вызываем соответствующий слот
     if (command == "add")
         calc.add(a, b);
     else if (command == "sub")
@@ -116,20 +106,15 @@ int main(int argc, char* argv[])
 
     Calculator calc;
 
-    // Чтение клавиатуры живёт в своём потоке,
-    // чтобы главный поток был свободен для цикла событий.
+    // Чтение консоли в отдельном потоке, чтобы главный поток крутил цикл событий
     ConsoleReader reader(kQuitCommands);
 
-    // Операция ушла считаться в фоновый поток
     QObject::connect(&calc, &Calculator::operationStarted,
                      [&out](const QString& expression) {
                          out << "Запущено: " << expression << "\n";
                          out.flush();
                      });
 
-    // Фоновая операция досчиталась. Результат приходит асинхронно,
-    // пока пользователь, возможно, уже вводит следующую команду,
-    // поэтому после него заново печатаем приглашение "> ".
     QObject::connect(&calc, &Calculator::resultReady,
                      [&out](const QString& expression, double result) {
                          if (expression == "reset")
@@ -139,16 +124,13 @@ int main(int argc, char* argv[])
                          out.flush();
                      });
 
-    // Когда произошла ошибка,
-    // выводим сообщение об ошибке.
     QObject::connect(&calc, &Calculator::errorOccurred,
                      [&out](const QString& msg) {
                          out << "Ошибка: " << msg << "\n";
                          out.flush();
                      });
 
-    // Завершение программы. Если в фоне ещё что-то считается,
-    // сначала дожидаемся всех результатов (сигнал allFinished).
+    // Перед выходом дожидаемся операций, которые ещё считаются
     auto finish = [&]() {
         if (calc.pendingCount() > 0) {
             out << "Ожидание завершения операций: " << calc.pendingCount() << "\n";
@@ -166,9 +148,7 @@ int main(int argc, char* argv[])
         app.quit();
     };
 
-    // Строка пришла из потока чтения. Третий аргумент &app - "контекст":
-    // лямбда выполнится в потоке app (главном), поэтому Qt доставит сигнал
-    // через очередь событий (Qt::QueuedConnection), а не вызовет её в чужом потоке.
+    // Контекст &app: лямбда выполняется в главном потоке (Qt::QueuedConnection)
     QObject::connect(&reader, &ConsoleReader::lineRead, &app,
                      [&](const QString& line) {
                          if (!processLine(line, calc, out)) {
@@ -180,7 +160,6 @@ int main(int argc, char* argv[])
                          out.flush();
                      });
 
-    // Ввод закончился (Ctrl+Z) - выходим так же, как по quit
     QObject::connect(&reader, &ConsoleReader::inputClosed, &app, finish);
 
     out << "=== Консольный калькулятор на Qt ===\n";
@@ -192,12 +171,8 @@ int main(int argc, char* argv[])
 
     reader.start();
 
-    // Цикл событий: главный поток ждёт и обрабатывает сигналы
-    // от потока ввода (и, дальше, от фоновых вычислений).
     const int exitCode = app.exec();
 
-    // Поток чтения к этому моменту уже завершился сам
-    // (после quit или конца ввода) - дожидаемся его.
     reader.wait();
 
     return exitCode;

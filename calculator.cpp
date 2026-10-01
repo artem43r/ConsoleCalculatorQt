@@ -19,16 +19,13 @@ void Calculator::startOperation(const QString& expression, std::function<double(
     ++m_pendingCount;
     emit operationStarted(expression);
 
-    // Наблюдатель живёт в главном потоке (родитель - калькулятор),
-    // поэтому его сигнал finished обрабатывается в главном потоке.
     auto* watcher = new QFutureWatcher<double>(this);
 
-    // Подключаемся ДО setFuture, чтобы не пропустить завершение
-    // очень быстрой задачи.
+    // Подключаемся до setFuture, чтобы не пропустить завершение
     connect(watcher, &QFutureWatcher<double>::finished, this,
             [this, watcher, expression]() {
                 const double value = watcher->result();
-                watcher->deleteLater();  // наблюдатель больше не нужен
+                watcher->deleteLater();
 
                 --m_pendingCount;
                 setResult(expression, value);
@@ -37,14 +34,13 @@ void Calculator::startOperation(const QString& expression, std::function<double(
                     emit allFinished();
             });
 
-    // Копируем задержку в локальную переменную: лямбда ниже работает
-    // в другом потоке и не должна читать поля калькулятора.
+    // Лямбда выполняется в другом потоке, поэтому получает копии данных, а не поля класса
     const int delay = m_delayMs;
 
     watcher->setFuture(QtConcurrent::run([compute, delay, expression]() {
-        qDebug() << "Вычисление" << expression
-                 << "в потоке" << QThread::currentThreadId();
-        QThread::msleep(delay);  // имитация тяжёлого вычисления
+        qDebug() << "compute" << expression
+                 << "in thread" << QThread::currentThreadId();
+        QThread::msleep(delay);  // имитация долгого вычисления
         return compute();
     }));
 }
@@ -75,8 +71,6 @@ void Calculator::multiply(double a, double b)
 
 void Calculator::divide(double a, double b)
 {
-    // Проверяем сразу, в главном потоке: запускать фоновую задачу,
-    // которая заведомо закончится ошибкой, незачем.
     if (qFuzzyIsNull(b)) {
         reportError("Деление на ноль невозможно!");
         return;

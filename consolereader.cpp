@@ -15,8 +15,6 @@ void ConsoleReader::run()
     while (in.readLineInto(&line)) {
         emit lineRead(line);
 
-        // Команду выхода отправили - дальше читать не нужно,
-        // поток завершается сам и не держит программу.
         const QString command = line.trimmed().section(' ', 0, 0);
         if (m_stopCommands.contains(command, Qt::CaseInsensitive))
             return;

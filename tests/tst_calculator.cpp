@@ -5,18 +5,13 @@
 #include "calculator.h"
 
 /**
- * @brief Юнит-тесты асинхронного калькулятора.
- *
- * QSignalSpy записывает каждое излучение сигнала вместе с аргументами.
- * spy.wait() крутит цикл событий, пока сигнал не придёт (или не истечёт таймаут),
- * поэтому им удобно дожидаться результатов из фоновых потоков.
+ * @brief Юнит-тесты асинхронного калькулятора (QTest + QSignalSpy).
  */
 class TestCalculator : public QObject
 {
     Q_OBJECT
 
 private:
-    // Короткая задержка, чтобы тесты шли быстро, но оставались асинхронными
     static constexpr int TestDelayMs = 50;
     static constexpr int WaitTimeoutMs = 5000;
 
@@ -32,7 +27,6 @@ private slots:
     void negativeDelayIsRejected();
 };
 
-// Таблица данных: один тест operations() прогоняется для каждой строки
 void TestCalculator::operations_data()
 {
     QTest::addColumn<QString>("operation");
@@ -90,7 +84,7 @@ void TestCalculator::resultIsAsynchronous()
 
     calc.add(1, 2);
 
-    QCOMPARE(resultSpy.count(), 0);      // сразу после вызова результата ещё нет
+    QCOMPARE(resultSpy.count(), 0);
     QCOMPARE(calc.pendingCount(), 1);
     QVERIFY(resultSpy.wait(WaitTimeoutMs));
     QCOMPARE(resultSpy.count(), 1);
@@ -105,13 +99,11 @@ void TestCalculator::divisionByZeroEmitsError()
 
     calc.divide(1, 0);
 
-    // Ошибка сообщается сразу, фоновая задача не запускается
     QCOMPARE(errorSpy.count(), 1);
     QCOMPARE(errorSpy.at(0).at(0).toString(), QString("Деление на ноль невозможно!"));
     QCOMPARE(calc.pendingCount(), 0);
     QVERIFY(calc.hasError());
 
-    // И результат так и не приходит
     QVERIFY(!resultSpy.wait(TestDelayMs * 4));
     QCOMPARE(resultSpy.count(), 0);
 }
@@ -143,7 +135,6 @@ void TestCalculator::reset()
 
     calc.reset();
 
-    // reset синхронный: сигнал приходит сразу
     QCOMPARE(resultSpy.count(), 2);
     QCOMPARE(resultSpy.at(1).at(1).toDouble(), 0.0);
     QCOMPARE(calc.result(), 0.0);
@@ -162,7 +153,7 @@ void TestCalculator::pendingCountAndAllFinished()
     QCOMPARE(calc.pendingCount(), 3);
 
     QVERIFY(finishedSpy.wait(WaitTimeoutMs));
-    QCOMPARE(finishedSpy.count(), 1);    // ровно один раз, после последней операции
+    QCOMPARE(finishedSpy.count(), 1);
     QCOMPARE(resultSpy.count(), 3);
     QCOMPARE(calc.pendingCount(), 0);
 }
