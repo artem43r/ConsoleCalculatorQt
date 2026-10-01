@@ -20,6 +20,7 @@ void printHelp(QTextStream& out)
     out << " mul <a> <b> - умножение\n";
     out << " div <a> <b> - деление\n";
     out << " reset - сброс\n";
+    out << " delay <мс> - задержка, имитирующая долгое вычисление\n";
     out << " help - эта справка\n";
     out << " quit - выход\n";
 }
@@ -49,6 +50,22 @@ bool processLine(const QString& rawLine, Calculator& calc, QTextStream& out)
     // Сброс
     if (command == "reset") {
         calc.reset();
+        return true;
+    }
+
+    // Задержка вычислений
+    if (command == "delay") {
+        bool ok;
+        const int ms = parts.value(1).toInt(&ok);
+
+        if (parts.size() != 2 || !ok) {
+            calc.reportError("Неверный формат. Используйте: delay <мс>");
+            return true;
+        }
+
+        calc.setDelayMs(ms);
+        if (calc.delayMs() == ms)
+            out << "Задержка: " << ms << " мс\n";
         return true;
     }
 
@@ -103,11 +120,22 @@ int main(int argc, char* argv[])
     // чтобы главный поток был свободен для цикла событий.
     ConsoleReader reader(kQuitCommands);
 
-    // Когда калькулятор успешно посчитал результат,
-    // выводим его в консоль.
+    // Операция ушла считаться в фоновый поток
+    QObject::connect(&calc, &Calculator::operationStarted,
+                     [&out](const QString& expression) {
+                         out << "Запущено: " << expression << "\n";
+                         out.flush();
+                     });
+
+    // Фоновая операция досчиталась. Результат приходит асинхронно,
+    // пока пользователь, возможно, уже вводит следующую команду,
+    // поэтому после него заново печатаем приглашение "> ".
     QObject::connect(&calc, &Calculator::resultReady,
-                     [&out](double result) {
-                         out << "Результат: " << result << "\n";
+                     [&out](const QString& expression, double result) {
+                         if (expression == "reset")
+                             out << "Результат: " << result << "\n";
+                         else
+                             out << "\nРезультат: " << expression << " = " << result << "\n> ";
                          out.flush();
                      });
 
@@ -119,15 +147,32 @@ int main(int argc, char* argv[])
                          out.flush();
                      });
 
+    // Завершение программы. Если в фоне ещё что-то считается,
+    // сначала дожидаемся всех результатов (сигнал allFinished).
+    auto finish = [&]() {
+        if (calc.pendingCount() > 0) {
+            out << "Ожидание завершения операций: " << calc.pendingCount() << "\n";
+            out.flush();
+            QObject::connect(&calc, &Calculator::allFinished, &app, [&]() {
+                out << "\nДо свидания!\n";
+                out.flush();
+                app.quit();
+            });
+            return;
+        }
+
+        out << "До свидания!\n";
+        out.flush();
+        app.quit();
+    };
+
     // Строка пришла из потока чтения. Третий аргумент &app - "контекст":
     // лямбда выполнится в потоке app (главном), поэтому Qt доставит сигнал
     // через очередь событий (Qt::QueuedConnection), а не вызовет её в чужом потоке.
     QObject::connect(&reader, &ConsoleReader::lineRead, &app,
                      [&](const QString& line) {
                          if (!processLine(line, calc, out)) {
-                             out << "До свидания!\n";
-                             out.flush();
-                             app.quit();
+                             finish();
                              return;
                          }
 
@@ -135,9 +180,8 @@ int main(int argc, char* argv[])
                          out.flush();
                      });
 
-    // Ввод закончился (Ctrl+Z) - выходим
-    QObject::connect(&reader, &ConsoleReader::inputClosed,
-                     &app, &QCoreApplication::quit);
+    // Ввод закончился (Ctrl+Z) - выходим так же, как по quit
+    QObject::connect(&reader, &ConsoleReader::inputClosed, &app, finish);
 
     out << "=== Консольный калькулятор на Qt ===\n";
 
