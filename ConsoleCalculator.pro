@@ -10,7 +10,9 @@ TEMPLATE = app
 
 SOURCES += \
     main.cpp \
-    calculator.cpp
+    calculator.cpp \
+    consolereader.cpp
 
 HEADERS += \
-    calculator.h
+    calculator.h \
+    consolereader.h
