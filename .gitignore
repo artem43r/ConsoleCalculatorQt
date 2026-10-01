@@ -1,0 +1,26 @@
+# Папки сборки
+build/
+build-*/
+debug/
+release/
+
+# Настройки Qt Creator (у каждого свои)
+.qtcreator/
+*.user
+*.user.*
+
+# Артефакты компиляции
+*.o
+*.obj
+moc_*
+ui_*
+qrc_*
+Makefile*
+*.exe
+*.dll
+
+# Файл истории, который создаёт программа
+history.txt
+
+# Настройки VS Code
+.vscode/
